@@ -11,6 +11,7 @@ Date: August 2023
 """
 
 import argparse
+import io
 import json
 import os
 import re
@@ -20,6 +21,9 @@ from pathlib import Path
 import pyfiglet
 import requests
 from rich.console import Console
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
 
 console = Console()
 
@@ -54,7 +58,7 @@ class PoCInGitHub:
         return json_files
 
     def read_json(self, json_file):
-        with open(json_file) as f:
+        with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data
 
@@ -172,6 +176,9 @@ class PoCInGitHub:
                 json.dump(results, f, indent=4, ensure_ascii=False, default=str)
             console.print(f"\n[+] Output file: {output}\n")
         else:
+            if len(results) == 0:
+                console.print("\n[-] No results found\n")
+                sys.exit(1)
             print()
             print(json.dumps(results, indent=4, ensure_ascii=False, default=str))
             print()
