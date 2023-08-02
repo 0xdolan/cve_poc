@@ -42,7 +42,13 @@ PoC for CVE ID using [**PoC-in-GitHub**](https://github.com/nomi-sec/PoC-in-GitH
    python3 -m pip install -r requirements.txt
    ```
 
-2. Open terminal and run `cve_poc.py` file as follows:
+   Run below command to clone the latest update of the `PoC-in-GitHub` from its repository:
+   
+   ```bash
+   python cve_poc.py -u
+   ```
+
+3. Open terminal and run `cve_poc.py` file as follows:
 
    If you want to get all CVEs for 2023:
 
