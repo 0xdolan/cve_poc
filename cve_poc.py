@@ -3,188 +3,104 @@
 
 """
 Author: 0xdolan
-Github: github.com/0xdolan
-Description: PoC for CVE ID using PoC-in-GitHub repo
-Usage: python PoC_in_GitHub.py -c CVE-2023-XXXXX
-References: https://github.com/nomi-sec/PoC-in-GitHub
-Date: August 2023
+Github: https://github.com/0xdolan/cve_poc.git
+Description: PoC for CVE IDs
+References: https://github.com/nomi-sec/PoC-in-GitHub, https://github.com/trickest/cve
 """
 
 import argparse
-import io
 import json
-import os
-import re
-import sys
+from datetime import datetime
 from pathlib import Path
 
-import pyfiglet
 import requests
 from rich.console import Console
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
 
 console = Console()
 
 
-class PoCInGitHub:
+class CVEPoCFinder:
     def __init__(self):
-        self.current_path = Path(__file__).parent.absolute()
-        self.repo_link = "https://github.com/nomi-sec/PoC-in-GitHub"
-        self.repo_path = self.current_path / "PoC-in-GitHub"
-
-    def clone_repo(self, url):
-        repo_name = url.split("/")[-1].split(".")[0]
-        repo_path = self.current_path / repo_name
-
-        if repo_path.exists():
-            console.print("\n[+] Repo already exists\n")
-            return repo_path
-
-        if requests.get(url).status_code != 200:
-            console.print("\n[-] Invalid URL\n")
-            sys.exit(1)
-
-        console.print("\n[+] Cloning repo\n")
-        os.system(f"git clone {url} {repo_path}")
-
-    def search_json_files(self, path):
-        json_files = []
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                if file.endswith(".json"):
-                    json_files.append(os.path.join(root, file))
-        return json_files
-
-    def read_json(self, json_file):
-        with open(json_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data
-
-    def search_cve(self, json_files, cve):
-        cve_list = []
-        for file in json_files:
-            data = self.read_json(file)
-            for i in data:
-                if cve in i.values():
-                    cve_list.append(i)
-
-        if len(cve_list) == 0:
-            cve = cve.lower()
-            for file in json_files:
-                data = self.read_json(file)
-                for i in data:
-                    if cve in i.values() or re.match(rf"^{cve}.*", i["name"]):
-                        cve_list.append(i)
-
-        cve_list = [dict(t) for t in {str(d): d for d in cve_list}.values()]
-
-        return cve_list
-
-    def get_cve_details(self, cve, sort_by_forks=False):
-        cves = self.search_cve(self.search_json_files(self.repo_path), cve)
-
-        res = []
-        for i in cves:
-            result = dict()
-            result["name"] = i["name"].upper()
-            result["github_repo"] = i["html_url"]
-            result["description"] = i["description"]
-            result["forks"] = i["forks"]
-            res.append(result)
-
-        if sort_by_forks:
-            res = sorted(res, key=lambda x: list(x.values())[0]["forks"], reverse=True)
-
-        return res
-
-    def update_repo(self):
-        if not self.repo_path.exists():
-            console.print("\n[-] Repo does not exist\n")
-            sys.exit(1)
-
-        console.print("\n[+] Updating repo\n")
-        os.system(f"git -C {self.repo_path} pull")
-
-        console.print(f"\n[+] Repo updated: {self.repo_path}\n")
-        return
-
-    def parse_args(self):
-        parser = argparse.ArgumentParser(description="PoC for CVE IDs")
-        parser.add_argument(
-            "-c", "--cve", type=str, help="CVE ID (e.g. CVE-2021-41773)", required=False
+        self.nomi_sec_poc_in_github = (
+            "https://raw.githubusercontent.com/nomi-sec/PoC-in-GitHub/master"
         )
-        parser.add_argument(
-            "-up",
-            "--update",
-            action="store_true",
-            help="Update PoC-in-GitHub repo",
-            required=False,
-        )
-        parser.add_argument(
-            "-o",
-            "--output",
-            type=str,
-            help="Output file (e.g. output.json)",
-            required=False,
-        )
-        args = parser.parse_args()
-        return args
+        self.trickest_cve = "https://github.com/trickest/cve/blob/main"
 
-    def main(self):
-        args = self.parse_args()
-        cve = args.cve
-        update = args.update
-        output = args.output
+    def validate_cve_id(self, cve_id):
+        if "_" in cve_id:
+            cve_id = cve_id.replace("_", "-")
 
-        if not cve and not update:
-            print()
-            console.print(
-                pyfiglet.figlet_format(
-                    "CVE PoC",
-                    font="slant",
-                    justify="center",
-                )
+        cve_year, cve_num = cve_id.split("-")[1:]
+
+        current_year = datetime.today().year
+        if int(cve_year) < 1999 or int(cve_year) > current_year:
+            print(f"[-] Error: CVE ID must be between 1999-{current_year}")
+            exit(1)
+
+        return cve_id, cve_year, cve_num
+
+    def fetch_results(self, cve_id):
+        cve_id, cve_year, cve_num = self.validate_cve_id(cve_id)
+
+        nomi_sec_poc_in_github_url = (
+            f"{self.nomi_sec_poc_in_github}/{cve_year}/{cve_id}.json"
+        )
+        trickest_cve_url = f"{self.trickest_cve}/{cve_year}/{cve_id}.md"
+
+        res_nomi_sec_poc_in_github_url = requests.get(nomi_sec_poc_in_github_url)
+        res_trickest_cve_url = requests.get(trickest_cve_url)
+
+        results = []
+        if not any([res_nomi_sec_poc_in_github_url, res_trickest_cve_url]):
+            print(f"[-] Error: {cve_id} not found!")
+            exit(1)
+
+        json_results = []
+        if res_nomi_sec_poc_in_github_url.status_code == 200:
+            json_response = res_nomi_sec_poc_in_github_url.json()
+            for cve_item in json_response:
+                url = cve_item["html_url"]
+                description = cve_item["description"]
+                json_results.append((url, description))
+        results.extend(json_results)
+
+        if res_trickest_cve_url.status_code == 200:
+            results.append((trickest_cve_url, None))
+
+        final_results = []
+        for url, description in results:
+            final_results.append(
+                {
+                    "url": url,
+                    "description": description,
+                }
             )
-            console.print(
-                pyfiglet.figlet_format(
-                    "by: 0xdolan",
-                    font="term",
-                    justify="center",
-                )
-            )
-            print()
-            console.print("\n[-] Please provide CVE ID")
-            console.print(f'[+] Usage: python {sys.argv[0]} -c "CVE-2023-XXXXX"\n')
-            sys.exit(1)
+        return {f"{cve_id}": final_results}
 
-        if not self.repo_path.exists():
-            console.print("\n[-] Repo does not exist")
-            console.print(f"[+] Do you want to clone the repo? (y/n)\n")
-            choice = input()
-            if choice.lower() == "y" or choice.lower() == "yes":
-                self.clone_repo(self.repo_link)
 
-        if update:
-            self.update_repo()
-            sys.exit(1)
+def main():
+    parser = argparse.ArgumentParser(description="CVE PoC Finder")
+    parser.add_argument("-c", "--cve_id", required=True, help="CVE ID to search for")
+    parser.add_argument("-o", "--output", help="Output file for JSON results")
+    parser.add_argument(
+        "--json", action="store_true", help="Output results in JSON format"
+    )
 
-        results = self.get_cve_details(cve)
+    args = parser.parse_args()
 
-        if output:
-            with open(output, "w", encoding="utf-8") as f:
-                json.dump(results, f, indent=4, ensure_ascii=False, default=str)
-            console.print(f"\n[+] Output file: {output}\n")
+    poc_finder = CVEPoCFinder()
+    results = poc_finder.fetch_results(args.cve_id)
+
+    if args.json:
+        output_results = json.dumps(results, indent=4, ensure_ascii=False, default=str)
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as output_file:
+                output_file.write(output_results)
         else:
-            if len(results) == 0:
-                console.print("\n[-] No results found\n")
-                sys.exit(1)
-            print()
-            print(json.dumps(results, indent=4, ensure_ascii=False, default=str))
-            print()
+            print(output_results)
+    else:
+        console.print(results)
 
 
 if __name__ == "__main__":
-    poc_in_github = PoCInGitHub()
-    poc_in_github.main()
+    main()
