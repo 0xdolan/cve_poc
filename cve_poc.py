@@ -168,6 +168,7 @@ class PoCInGitHub:
 
         if update:
             self.update_repo()
+            sys.exit(1)
 
         results = self.get_cve_details(cve)
 
