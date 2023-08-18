@@ -4,15 +4,15 @@
 """
 Author: 0xdolan
 Github: https://github.com/0xdolan/cve_poc.git
-Description: PoC for CVE IDs
-References: https://github.com/nomi-sec/PoC-in-GitHub, https://github.com/trickest/cve
+Description: find Proof of concept (PoC) repos for CVEs
 """
 
 import argparse
 import json
+import sys
 from datetime import datetime
-from pathlib import Path
 
+import pyfiglet
 import requests
 from rich.console import Console
 
@@ -27,79 +27,109 @@ class CVEPoCFinder:
         self.trickest_cve = "https://github.com/trickest/cve/blob/main"
 
     def validate_cve_id(self, cve_id):
-        if "_" in cve_id:
-            cve_id = cve_id.replace("_", "-")
-
+        cve_id = cve_id.replace("_", "-")
         cve_year, cve_num = cve_id.split("-")[1:]
 
         current_year = datetime.today().year
-        if int(cve_year) < 1999 or int(cve_year) > current_year:
-            print(f"[-] Error: CVE ID must be between 1999-{current_year}")
+        if not (1999 <= int(cve_year) <= current_year):
+            console.print(f"[-] Error: CVE ID must be between 1999-{current_year}")
             exit(1)
 
         return cve_id, cve_year, cve_num
 
     def fetch_results(self, cve_id):
         cve_id, cve_year, cve_num = self.validate_cve_id(cve_id)
+        nomi_sec_url = f"{self.nomi_sec_poc_in_github}/{cve_year}/{cve_id}.json"
+        trickest_url = f"{self.trickest_cve}/{cve_year}/{cve_id}.md"
 
-        nomi_sec_poc_in_github_url = (
-            f"{self.nomi_sec_poc_in_github}/{cve_year}/{cve_id}.json"
-        )
-        trickest_cve_url = f"{self.trickest_cve}/{cve_year}/{cve_id}.md"
-
-        res_nomi_sec_poc_in_github_url = requests.get(nomi_sec_poc_in_github_url)
-        res_trickest_cve_url = requests.get(trickest_cve_url)
+        res_nomi_sec = requests.get(nomi_sec_url)
+        res_trickest = requests.get(trickest_url)
 
         results = []
-        if not any([res_nomi_sec_poc_in_github_url, res_trickest_cve_url]):
-            print(f"[-] Error: {cve_id} not found!")
-            exit(1)
 
-        json_results = []
-        if res_nomi_sec_poc_in_github_url.status_code == 200:
-            json_response = res_nomi_sec_poc_in_github_url.json()
+        if res_trickest.status_code == 200:
+            results.append({"url": trickest_url, "description": None})
+
+        if res_nomi_sec.status_code == 200:
+            json_response = res_nomi_sec.json()
             for cve_item in json_response:
                 url = cve_item["html_url"]
                 description = cve_item["description"]
-                json_results.append((url, description))
-        results.extend(json_results)
+                results.append({"url": url, "description": description})
 
-        if res_trickest_cve_url.status_code == 200:
-            results.append((trickest_cve_url, None))
+        return {cve_id: results}
 
-        final_results = []
-        for url, description in results:
-            final_results.append(
-                {
-                    "url": url,
-                    "description": description,
-                }
-            )
-        return {f"{cve_id}": final_results}
+    def get_cve_by_year(self, year):
+        urls = [
+            f"https://github.com/trickest/cve/tree/main/{year}",
+            f"https://github.com/nomi-sec/PoC-in-GitHub/tree/master/{year}",
+        ]
+
+        results = []
+
+        for url in urls:
+            res = requests.get(url)
+            total = len(res.json()["payload"]["tree"]["items"])
+            cve_titles = [
+                item["name"].split(".")[0]
+                for item in res.json()["payload"]["tree"]["items"]
+            ]
+
+            results.append({"url": url, "total": total, "cve_titles": cve_titles})
+
+        return results
 
 
 def main():
     parser = argparse.ArgumentParser(description="CVE PoC Finder")
-    parser.add_argument("-c", "--cve_id", required=True, help="CVE ID to search for")
+    parser.add_argument("-c", "--cve_id", help="CVE ID to search for")
+    parser.add_argument("-y", "--year", type=int, help="CVE year to search for")
     parser.add_argument("-o", "--output", help="Output file for JSON results")
     parser.add_argument(
         "--json", action="store_true", help="Output results in JSON format"
     )
-
     args = parser.parse_args()
 
-    poc_finder = CVEPoCFinder()
-    results = poc_finder.fetch_results(args.cve_id)
+    if not any([bool(x) for x in vars(args).values()]):
+        print()
+        console.print(
+            pyfiglet.figlet_format(
+                "CVE PoC",
+                font="slant",
+                justify="center",
+            )
+        )
+        console.print(
+            pyfiglet.figlet_format(
+                "by: 0xdolan",
+                font="term",
+                justify="center",
+            )
+        )
+        print()
+        console.print("\n[-] Please provide either --cve_id or --year option.")
+        sys.exit(1)
+
+    if args.year:
+        poc_finder = CVEPoCFinder()
+        cve_results = poc_finder.get_cve_by_year(args.year)
+    elif args.cve_id:
+        poc_finder = CVEPoCFinder()
+        cve_results = poc_finder.fetch_results(args.cve_id)
+    else:
+        console.print("Please provide either --cve_id or --year option. Run -")
+        return
+
+    output_results = json.dumps(cve_results, indent=4, ensure_ascii=False, default=str)
 
     if args.json:
-        output_results = json.dumps(results, indent=4, ensure_ascii=False, default=str)
         if args.output:
             with open(args.output, "w", encoding="utf-8") as output_file:
                 output_file.write(output_results)
         else:
-            print(output_results)
+            console.print(output_results)
     else:
-        console.print(results)
+        console.print(cve_results)
 
 
 if __name__ == "__main__":

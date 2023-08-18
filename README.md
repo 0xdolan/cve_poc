@@ -1,6 +1,6 @@
-# CVE PoC
+# CVE Proof of Concept
 
-PoC for CVE ID using [**PoC-in-GitHub**](https://github.com/nomi-sec/PoC-in-GitHub) repo
+find Proof of concept (PoC) repos for CVEs
 
 <pre align="center"><code>
 
@@ -15,16 +15,12 @@ PoC for CVE ID using [**PoC-in-GitHub**](https://github.com/nomi-sec/PoC-in-GitH
 <p align="center">
   <a href="#how-it-works">How</a> •
   <a href="#install">Install</a>
-  </p>
+</p>
 <br><br>
 
 ## How it works
 
 [![screenshot_001](./img/001.jpg)](./img/001.jpg)
-
-[![screenshot_002](./img/002.jpg)](./img/002.jpg)
-
-[![screenshot_003](./img/003.jpg)](./img/003.jpg)
 
 ## Install
 
@@ -42,37 +38,27 @@ PoC for CVE ID using [**PoC-in-GitHub**](https://github.com/nomi-sec/PoC-in-GitH
    python3 -m pip install -r requirements.txt
    ```
 
-2. Run below command to clone the latest update of the `PoC-in-GitHub` from its repository:
-   
-   ```bash
-   python cve_poc.py -u
-   ```
+2. Open the terminal and run the cve_poc.py file as follows:
 
-3. Open terminal and run `cve_poc.py` file as follows:
+To get all CVEs for 2023:
 
-   If you want to get all CVEs for 2023:
+```bash
+python cve_poc.py -y 2023
 
-   ```bash
-   python cve_poc.py -c "CVE-2023"
-   ```
+```
 
-   or search for an exact one:
+To search for an exact one:
 
-   ```bash
-   python cve_poc.py -c "CVE-2023-1671"
-   ```
+```bash
+python cve_poc.py -c "CVE-2023-1671"
 
-   If you want to save it as json:
+```
 
-   ```bash
-   python cve_poc.py -c "CVE-2023-1671" -o cve.json
-   ```
+To save the output as JSON:
 
-   If you wanted to update the data from base repo [_PoC-in-GitHub_](https://github.com/nomi-sec/PoC-in-GitHub), you can run below command:
-
-   ```bash
-   python cve_poc.py -up
-   ```
+```bash
+python cve_poc.py -c "CVE-2023-1671" -o cve.json
+```
 
 ## License
 
