@@ -14,6 +14,7 @@ from datetime import datetime
 
 import pyfiglet
 import requests
+from bs4 import BeautifulSoup
 from rich.console import Console
 
 console = Console()
@@ -69,11 +70,21 @@ class CVEPoCFinder:
 
         for url in urls:
             res = requests.get(url)
-            total = len(res.json()["payload"]["tree"]["items"])
-            cve_titles = [
-                item["name"].split(".")[0]
-                for item in res.json()["payload"]["tree"]["items"]
-            ]
+            soup = BeautifulSoup(res.text, "lxml")
+            script_tag = soup.find(
+                "script",
+                {
+                    "type": "application/json",
+                    "data-target": "react-app.embeddedData",
+                },
+            )
+            if script_tag:
+                json_data = script_tag.string.strip()
+                data = json.loads(json_data)
+                items = data["payload"]["tree"]["items"]
+
+                total = len(items)
+                cve_titles = [item["name"].split(".")[0] for item in items]
 
             results.append({"url": url, "total": total, "cve_titles": cve_titles})
 
@@ -134,3 +145,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# CVE = CVEPoCFinder()
+
+# ex = "CVE-2023-1671"
+# y = "2023"
+# # print(CVE.fetch_results(ex))
+# print(CVE.get_cve_by_year(y))
