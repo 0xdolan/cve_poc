@@ -28,7 +28,7 @@ class CVEPoCFinder:
         self.trickest_cve = "https://github.com/trickest/cve/blob/main"
 
     def validate_cve_id(self, cve_id):
-        cve_id = cve_id.replace("_", "-")
+        cve_id = cve_id.replace("_", "-").strip()
         cve_year, cve_num = cve_id.split("-")[1:]
 
         current_year = datetime.today().year
