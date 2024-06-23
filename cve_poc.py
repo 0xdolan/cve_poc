@@ -145,11 +145,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# CVE = CVEPoCFinder()
-
-# ex = "CVE-2023-1671"
-# y = "2023"
-# # print(CVE.fetch_results(ex))
-# print(CVE.get_cve_by_year(y))
