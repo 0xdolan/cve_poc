@@ -49,7 +49,13 @@ class CVEPoCFinder:
         results = []
 
         if res_trickest.status_code == 200:
-            results.append({"url": trickest_url, "description": None})
+            soup = BeautifulSoup(res_trickest.text, "lxml")
+            selector = "#repo-content-pjax-container > react-app > div > div > div.Box-sc-g0xbh4-0.fSWWem > div > div > div.Box-sc-g0xbh4-0.emFMJu > div.Box-sc-g0xbh4-0.hlUAHL > div > div:nth-child(3) > div.Box-sc-g0xbh4-0.iJmJly > div > div.Box-sc-g0xbh4-0.ytOJl > section > div > article > p:nth-child(4)"
+            des = soup.select_one(selector)
+            if des:
+                results.append({"url": trickest_url, "description": des.text})
+            else:
+                results.append({"url": trickest_url, "description": None})
 
         if res_nomi_sec.status_code == 200:
             json_response = res_nomi_sec.json()
