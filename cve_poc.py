@@ -26,6 +26,7 @@ class CVEPoCFinder:
             "https://raw.githubusercontent.com/nomi-sec/PoC-in-GitHub/master"
         )
         self.trickest_cve = "https://github.com/trickest/cve/blob/main"
+        self.cvedb_shodan = "https://cvedb.shodan.io/cve"
 
     def validate_cve_id(self, cve_id):
         cve_id = cve_id.replace("_", "-").strip()
@@ -37,6 +38,12 @@ class CVEPoCFinder:
             exit(1)
 
         return cve_id, cve_year, cve_num
+
+    def fetch_cvedb_shodan(self, cve_id):
+        res = requests.get(f"{self.cvedb_shodan}/{cve_id}")
+        if res.status_code == 200:
+            json_response = res.json()
+        return json_response
 
     def fetch_results(self, cve_id):
         cve_id, cve_year, cve_num = self.validate_cve_id(cve_id)
@@ -64,7 +71,7 @@ class CVEPoCFinder:
                 description = cve_item["description"]
                 results.append({"url": url, "description": description})
 
-        return {cve_id: results}
+        return {"cvedb_shodan": self.fetch_cvedb_shodan(cve_id), cve_id: results}
 
     def get_cve_by_year(self, year):
         urls = [
